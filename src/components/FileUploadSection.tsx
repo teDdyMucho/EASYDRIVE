@@ -91,31 +91,25 @@ export default function FileUploadSection() {
     const parts = q.split(',').map((p) => p.trim()).filter(Boolean);
     const idxWithNumber = parts.findIndex((p) => /\d/.test(p));
     const normalizedQuery = idxWithNumber > 0 ? parts.slice(idxWithNumber).join(', ') : q;
-    const looksLikeCanada =
-      /\bcanada\b/i.test(q) ||
-      /\bquébec\b/i.test(q) ||
-      /\bqc\b/i.test(q) ||
-      /\bmontreal\b/i.test(q) ||
-      /\b,\s*ca\s*$/i.test(q);
-    const countrycodes = looksLikeCanada ? '&countrycodes=ca' : '';
-
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1${countrycodes}&q=${encodeURIComponent(normalizedQuery)}`;
+    const url = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=pjson&maxLocations=1&outFields=*&singleLine=${encodeURIComponent(normalizedQuery)}`;
     const res = await fetch(url);
     if (!res.ok) return null;
-    const data = (await res.json()) as Array<{ lat: string; lon: string }>;
-    if (!Array.isArray(data) || data.length === 0) return null;
-    const lat = Number(data[0].lat);
-    const lng = Number(data[0].lon);
+    const data = (await res.json()) as {
+      candidates?: Array<{ location?: { x?: number; y?: number } }>;
+    };
+    const candidate = data?.candidates?.[0];
+    const lat = Number(candidate?.location?.y);
+    const lng = Number(candidate?.location?.x);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     return { lat, lng };
   };
 
   const reverseGeocode = async (lat: number, lng: number): Promise<string | null> => {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lng))}`;
+    const url = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?f=pjson&location=${encodeURIComponent(String(lng))}%2C${encodeURIComponent(String(lat))}`;
     const res = await fetch(url);
     if (!res.ok) return null;
-    const data = (await res.json()) as { display_name?: string };
-    return data?.display_name ?? null;
+    const data = (await res.json()) as { address?: { Match_addr?: string; LongLabel?: string } };
+    return data?.address?.LongLabel ?? data?.address?.Match_addr ?? null;
   };
 
   const dropoffCoords = useMemo(() => {
