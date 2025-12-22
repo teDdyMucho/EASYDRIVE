@@ -14,10 +14,36 @@ interface UploadedFile {
   file: File;
 }
 
-export default function FileUploadSection() {
+interface FileUploadSectionProps {
+  hideHeader?: boolean;
+  onContinueToSignIn?: () => void;
+}
+
+type ReceiptEntry = {
+  id: string;
+  createdAt: string;
+  text: string;
+};
+
+export default function FileUploadSection({ hideHeader = false, onContinueToSignIn }: FileUploadSectionProps) {
   const STORAGE_FORM = 'ed_extractedFormData';
   const STORAGE_MESSAGE = 'ed_submitMessage';
   const STORAGE_ERROR = 'ed_submitError';
+  const STORAGE_RECEIPTS_PENDING = 'ed_receipts_pending';
+  const STORAGE_RECEIPTS_BY_USER_PREFIX = 'ed_receipts_by_user_';
+  const STORAGE_DOCUMENTS_PENDING_CLAIM = 'ed_documents_pending_claim';
+
+  const isLoggedIn = useMemo(() => {
+    try {
+      return Boolean(localStorage.getItem('ed_googleCredential'));
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const preventFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+  };
 
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
@@ -25,6 +51,7 @@ export default function FileUploadSection() {
   const [receiptText, setReceiptText] = useState<string | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [receiptCopied, setReceiptCopied] = useState(false);
+  const [isManualFormOpen, setIsManualFormOpen] = useState(false);
   const [submitMessage, setSubmitMessage] = useState<string | null>(() => {
     try {
       return localStorage.getItem(STORAGE_MESSAGE);
@@ -79,6 +106,44 @@ export default function FileUploadSection() {
       localStorage.removeItem(STORAGE_FORM);
       localStorage.removeItem(STORAGE_MESSAGE);
       localStorage.removeItem(STORAGE_ERROR);
+    } catch {
+      // ignore
+    }
+  };
+
+  const getUserKey = (): string | null => {
+    try {
+      const token = localStorage.getItem('ed_googleCredential');
+      if (!token) return null;
+
+      const parts = token.split('.');
+      if (parts.length < 2) return null;
+
+      const base64Url = parts[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+      const json = atob(padded);
+      const payload = JSON.parse(json) as { sub?: string; email?: string };
+      return payload?.sub || payload?.email || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const persistReceipt = (text: string) => {
+    const entry: ReceiptEntry = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      createdAt: new Date().toISOString(),
+      text,
+    };
+
+    const userKey = getUserKey();
+    const storageKey = userKey ? `${STORAGE_RECEIPTS_BY_USER_PREFIX}${userKey}` : STORAGE_RECEIPTS_PENDING;
+
+    try {
+      const existingRaw = localStorage.getItem(storageKey);
+      const existing = existingRaw ? (JSON.parse(existingRaw) as ReceiptEntry[]) : [];
+      localStorage.setItem(storageKey, JSON.stringify([entry, ...existing]));
     } catch {
       // ignore
     }
@@ -264,11 +329,11 @@ export default function FileUploadSection() {
     return {
       vehicle: {
         vin: output?.vehicle?.vin ?? '',
-        year: output?.vehicle?.year?.toString?.() ?? '',
+        year: output?.vehicle?.year ?? '',
         make: output?.vehicle?.make ?? '',
         model: output?.vehicle?.model ?? '',
         transmission: output?.vehicle?.transmission ?? '',
-        odometer_km: output?.vehicle?.odometer_km?.toString?.() ?? '',
+        odometer_km: output?.vehicle?.odometer_km ?? '',
         exterior_color: output?.vehicle?.exterior_color ?? '',
         interior_color: output?.vehicle?.interior_color ?? '',
         has_accident: output?.vehicle?.has_accident ?? '',
@@ -307,6 +372,216 @@ export default function FileUploadSection() {
       },
       dealer_notes: output?.dealer_notes ?? '',
     };
+  };
+
+  const createBlankFormData = () =>
+    initFormData({
+      vehicle: {},
+      selling_dealership: {},
+      buying_dealership: {},
+      pickup_location: {},
+      dropoff_location: { lat: '', lng: '' },
+      transaction: {},
+      authorization: {},
+      dealer_notes: '',
+    });
+
+  const closeManualForm = () => {
+    setIsManualFormOpen(false);
+    setFormData(null);
+  };
+
+  const renderFormDetails = () => {
+    if (!formData) return null;
+
+    return (
+      <div className="mt-6 border border-gray-200 rounded-lg p-4 sm:p-6 bg-gray-50">
+        <h4 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">Extracted Details</h4>
+
+        <div className="mb-6">
+          <h5 className="text-sm font-semibold text-gray-700 mb-3">Vehicle</h5>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">VIN</label>
+              <input value={formData.vehicle.vin} onChange={(e) => updateFormField('vehicle', 'vin', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Year</label>
+              <input value={formData.vehicle.year} onChange={(e) => updateFormField('vehicle', 'year', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Make</label>
+              <input value={formData.vehicle.make} onChange={(e) => updateFormField('vehicle', 'make', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Model</label>
+              <input value={formData.vehicle.model} onChange={(e) => updateFormField('vehicle', 'model', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Transmission</label>
+              <input value={formData.vehicle.transmission} onChange={(e) => updateFormField('vehicle', 'transmission', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Odometer (km)</label>
+              <input value={formData.vehicle.odometer_km} onChange={(e) => updateFormField('vehicle', 'odometer_km', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Exterior Color</label>
+              <input value={formData.vehicle.exterior_color} onChange={(e) => updateFormField('vehicle', 'exterior_color', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Interior Color</label>
+              <input value={formData.vehicle.interior_color} onChange={(e) => updateFormField('vehicle', 'interior_color', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Has Accident</label>
+              <input value={formData.vehicle.has_accident} onChange={(e) => updateFormField('vehicle', 'has_accident', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <h5 className="text-sm font-semibold text-gray-700 mb-3">Selling Dealership</h5>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Name</label>
+              <input value={formData.selling_dealership.name} onChange={(e) => updateFormField('selling_dealership', 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Phone</label>
+              <input value={formData.selling_dealership.phone} onChange={(e) => updateFormField('selling_dealership', 'phone', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Address</label>
+              <input value={formData.selling_dealership.address} onChange={(e) => updateFormField('selling_dealership', 'address', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <h5 className="text-sm font-semibold text-gray-700 mb-3">Buying Dealership</h5>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Name</label>
+              <input value={formData.buying_dealership.name} onChange={(e) => updateFormField('buying_dealership', 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Phone</label>
+              <input value={formData.buying_dealership.phone} onChange={(e) => updateFormField('buying_dealership', 'phone', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Contact Name</label>
+              <input value={formData.buying_dealership.contact_name} onChange={(e) => updateFormField('buying_dealership', 'contact_name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <h5 className="text-sm font-semibold text-gray-700 mb-3">Pickup Location</h5>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Name</label>
+              <input value={formData.pickup_location.name} onChange={(e) => updateFormField('pickup_location', 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Phone</label>
+              <input value={formData.pickup_location.phone} onChange={(e) => updateFormField('pickup_location', 'phone', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Address</label>
+              <input value={formData.pickup_location.address} onChange={(e) => updateFormField('pickup_location', 'address', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <h5 className="text-sm font-semibold text-gray-700 mb-3">Drop-off Location</h5>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Name</label>
+              <input value={String(formData?.dropoff_location?.name ?? '')} onChange={(e) => updateFormField('dropoff_location', 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Phone</label>
+              <input value={String(formData?.dropoff_location?.phone ?? '')} onChange={(e) => updateFormField('dropoff_location', 'phone', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Address</label>
+              <input
+                value={String(formData?.dropoff_location?.address ?? '')}
+                onChange={(e) => updateFormField('dropoff_location', 'address', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                placeholder="Type address to auto-pin on the map"
+              />
+              <div className="mt-2 text-xs text-gray-500">
+                Click the map to pin the drop-off location (auto-fills address), or type an address to auto-pin.
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden bg-white h-60 sm:h-80">
+            <MapContainer
+              center={dropoffCoords ? [dropoffCoords.lat, dropoffCoords.lng] : pickupCoords ? [pickupCoords.lat, pickupCoords.lng] : [45.5017, -73.5673]}
+              zoom={dropoffCoords || pickupCoords ? 13 : 10}
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                attribution='Tiles &copy; Esri'
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              />
+              <DropoffMapClickHandler />
+              {(dropoffCoords || pickupCoords) && (
+                <>
+                  <DropoffMapUpdater lat={(dropoffCoords ?? pickupCoords)!.lat} lng={(dropoffCoords ?? pickupCoords)!.lng} />
+                  <Marker position={[(dropoffCoords ?? pickupCoords)!.lat, (dropoffCoords ?? pickupCoords)!.lng]} icon={dropoffMarkerIcon} />
+                </>
+              )}
+            </MapContainer>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <h5 className="text-sm font-semibold text-gray-700 mb-3">Transaction</h5>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Transaction ID</label>
+              <input value={formData.transaction.transaction_id} onChange={(e) => updateFormField('transaction', 'transaction_id', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Release Form #</label>
+              <input value={formData.transaction.release_form_number} onChange={(e) => updateFormField('transaction', 'release_form_number', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Release Date</label>
+              <input value={formData.transaction.release_date} onChange={(e) => updateFormField('transaction', 'release_date', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Arrival Date</label>
+              <input value={formData.transaction.arrival_date} onChange={(e) => updateFormField('transaction', 'arrival_date', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <h5 className="text-sm font-semibold text-gray-700 mb-3">Authorization</h5>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Released By Name</label>
+              <input value={formData.authorization.released_by_name} onChange={(e) => updateFormField('authorization', 'released_by_name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Released To Name</label>
+              <input value={formData.authorization.released_to_name} onChange={(e) => updateFormField('authorization', 'released_to_name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h5 className="text-sm font-semibold text-gray-700 mb-3">Dealer Notes</h5>
+          <textarea value={formData.dealer_notes} onChange={(e) => setFormData((prev: any) => ({ ...prev, dealer_notes: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg min-h-[96px]" />
+        </div>
+      </div>
+    );
   };
 
   const updateFormField = (section: string, key: string, value: string) => {
@@ -397,6 +672,7 @@ export default function FileUploadSection() {
       try {
         setReceiptText(null);
         setIsReceiptOpen(false);
+        const submittedAt = new Date().toISOString();
         const user = (() => {
           try {
             const token = localStorage.getItem('ed_googleCredential');
@@ -434,7 +710,7 @@ export default function FileUploadSection() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            submittedAt: new Date().toISOString(),
+            submittedAt,
             user,
             userName: user.name || user.email || 'Account',
             files,
@@ -448,10 +724,68 @@ export default function FileUploadSection() {
         }
 
         const responseJson = await webhookRes.json().catch(() => null);
-        const responseText = Array.isArray(responseJson) ? responseJson?.[0]?.text : responseJson?.text;
-        if (typeof responseText === 'string' && responseText.trim()) {
-          setReceiptText(responseText);
-          setIsReceiptOpen(true);
+        const responseText = (() => {
+          if (Array.isArray(responseJson)) {
+            const first = responseJson?.[0] as any;
+            return first?.output ?? first?.text;
+          }
+          const obj = responseJson as any;
+          return obj?.output ?? obj?.text;
+        })();
+        const fallbackReceipt = (() => {
+          const now = new Date().toISOString();
+          const pickupName = String(formData?.pickup_location?.name ?? '').trim();
+          const pickupPhone = String(formData?.pickup_location?.phone ?? '').trim();
+          const pickupAddress = String(formData?.pickup_location?.address ?? '').trim();
+          const dropName = String(formData?.dropoff_location?.name ?? '').trim();
+          const dropPhone = String(formData?.dropoff_location?.phone ?? '').trim();
+          const dropAddress = String(formData?.dropoff_location?.address ?? '').trim();
+          const txnId = String(formData?.transaction?.transaction_id ?? formData?.transaction_id ?? '').trim();
+          const releaseForm = String(formData?.transaction?.release_form_number ?? formData?.release_form_number ?? '').trim();
+          const arrivalDate = String(formData?.transaction?.arrival_date ?? formData?.arrival_date ?? '').trim();
+          const userLabel = String(user?.name || user?.email || 'Account').trim();
+
+          const lines: string[] = [];
+          lines.push('Receipt');
+          lines.push(`Created: ${now}`);
+          lines.push(`Account: ${userLabel}`);
+          lines.push('');
+          lines.push('pickup location:');
+          if (pickupName) lines.push(`Name: ${pickupName}`);
+          if (pickupPhone) lines.push(`Phone: ${pickupPhone}`);
+          if (pickupAddress) lines.push(`Address: ${pickupAddress}`);
+          lines.push('');
+          lines.push('Dropoff location:');
+          if (dropName) lines.push(`Name: ${dropName}`);
+          if (dropPhone) lines.push(`Phone: ${dropPhone}`);
+          if (dropAddress) lines.push(`Adress: ${dropAddress}`);
+          lines.push('');
+          lines.push('Transaction:');
+          if (txnId) lines.push(`Transaction id: ${txnId}`);
+          if (releaseForm) lines.push(`Release form number: ${releaseForm}`);
+          if (arrivalDate) lines.push(`Arrival date: ${arrivalDate}`);
+          return lines.join('\n');
+        })();
+
+        const finalReceiptText =
+          typeof responseText === 'string' && responseText.trim() ? responseText : fallbackReceipt;
+
+        const normalizedReceipt = String(finalReceiptText).replace(/\r\n/g, '\n').trim();
+
+        persistReceipt(normalizedReceipt);
+        setReceiptText(normalizedReceipt);
+        setIsReceiptOpen(true);
+
+        if (!isLoggedIn) {
+          try {
+            const raw = localStorage.getItem(STORAGE_DOCUMENTS_PENDING_CLAIM);
+            const existing = raw ? (JSON.parse(raw) as Array<{ submittedAt: string; receipt: string }>) : [];
+            const next = Array.isArray(existing) ? existing : [];
+            next.unshift({ submittedAt, receipt: normalizedReceipt });
+            localStorage.setItem(STORAGE_DOCUMENTS_PENDING_CLAIM, JSON.stringify(next.slice(0, 25)));
+          } catch {
+            // ignore
+          }
         }
 
         setSubmitMessage('Document submitted successfully.');
@@ -595,26 +929,44 @@ export default function FileUploadSection() {
                 <div className="text-xs text-gray-500">
                   You can close this receipt and upload a new document.
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsReceiptOpen(false);
-                    setReceiptText(null);
-                    setReceiptCopied(false);
-                  }}
-                  className="inline-flex justify-center rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 transition-colors"
-                >
-                  Done
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {!isLoggedIn && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsReceiptOpen(false);
+                        setReceiptText(null);
+                        setReceiptCopied(false);
+                      }}
+                      className="inline-flex justify-center rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-colors"
+                    >
+                      Back
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsReceiptOpen(false);
+                      setReceiptText(null);
+                      setReceiptCopied(false);
+                      if (!isLoggedIn) onContinueToSignIn?.();
+                    }}
+                    className="inline-flex justify-center rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 transition-colors"
+                  >
+                    {isLoggedIn ? 'Close' : 'Continue'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
-      <div className="mb-6">
-        <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-1 sm:mb-2">Upload Documents</h3>
-        <p className="text-sm sm:text-base text-gray-600">Upload vehicle release forms, work orders, or any related documentation</p>
-      </div>
+      {!hideHeader && (
+        <div className="mb-6">
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-1 sm:mb-2">Upload Documents</h3>
+          <p className="text-sm sm:text-base text-gray-600">Upload vehicle release forms, work orders, or any related documentation</p>
+        </div>
+      )}
 
       <input
         ref={fileInputRef}
@@ -625,43 +977,159 @@ export default function FileUploadSection() {
       />
 
       {uploadedFiles.length === 0 && !formData && (
-        <div
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-lg p-6 sm:p-12 text-center transition-all ${
-            dragActive
-              ? 'border-cyan-500 bg-cyan-50'
-              : 'border-gray-300 hover:border-cyan-400 bg-gray-50'
-          }`}
-        >
-          <div className="flex flex-col items-center">
-            <div className="bg-cyan-50 p-4 rounded-full mb-4">
-              <Upload className="w-10 h-10 text-cyan-500" />
-            </div>
-            <p className="text-base sm:text-lg font-medium text-gray-800 mb-2">
-              Drag and drop files here
-            </p>
-            <p className="text-gray-500 mb-4">or</p>
-            <button
-              onClick={onButtonClick}
-              className="w-full sm:w-auto bg-cyan-500 text-white px-6 py-3 rounded-lg hover:bg-cyan-600 transition-colors font-medium"
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+            <div
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+              className={`p-6 sm:p-10 transition-all md:rounded-l-2xl ${
+                dragActive ? 'bg-cyan-50' : 'bg-white'
+              }`}
             >
-              Browse Files
-            </button>
-            <p className="text-sm text-gray-500 mt-4">
-              Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
-            </p>
+              <div className="flex flex-col items-center text-center">
+                <div className="bg-cyan-50 p-4 rounded-full mb-4 ring-1 ring-cyan-100">
+                  <Upload className="w-10 h-10 text-cyan-600" />
+                </div>
+                <div className="text-sm font-semibold text-cyan-700 mb-1">Automatic Extraction</div>
+                <div className="text-lg font-semibold text-gray-900">Upload Release Form</div>
+                <div className="mt-2 max-w-md text-sm text-gray-600">
+                  Upload the release form or work order and we will automatically extract the details for you.
+                </div>
+
+                <div
+                  className={`mt-6 w-full max-w-md min-h-[200px] rounded-2xl border-2 border-dashed px-5 py-6 transition-colors flex flex-col items-center ${
+                    dragActive ? 'border-cyan-500 bg-cyan-50' : 'border-gray-200 bg-gray-50'
+                  }`}
+                >
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-gray-800">Drag and drop your file here</div>
+                    <div className="mt-1 text-xs text-gray-500">or</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onButtonClick}
+                    className="mt-auto w-full bg-cyan-500 text-white px-6 py-3 rounded-lg hover:bg-cyan-600 transition-colors font-semibold"
+                  >
+                    Browse Files
+                  </button>
+                  <div className="mt-3 text-xs text-gray-500 text-center">
+                    Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t md:border-t-0 md:border-l border-gray-200 p-6 sm:p-10 md:rounded-r-2xl bg-gray-50">
+              <div className="flex flex-col items-center text-center">
+                <div className="bg-white p-4 rounded-full mb-4 ring-1 ring-gray-200">
+                  <FileText className="w-10 h-10 text-gray-700" />
+                </div>
+                <div className="text-sm font-semibold text-gray-700 mb-1">Manual Entry</div>
+                <div className="text-lg font-semibold text-gray-900">Fill Out the Form</div>
+                <div className="mt-2 max-w-md text-sm text-gray-600">
+                  Use this option if you don’t have a release form file. You can manually enter pickup, drop-off, and vehicle details.
+                </div>
+
+                <div className="mt-6 w-full max-w-md min-h-[200px] rounded-2xl border border-gray-200 bg-white px-5 py-6 flex flex-col items-center">
+                  <div className="text-center text-sm font-medium text-gray-800">No file to upload?</div>
+                  <div className="mt-1 text-center text-xs text-gray-500">Use manual entry instead.</div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearPersisted();
+                      setSubmitMessage(null);
+                      setSubmitError(false);
+                      setReceiptText(null);
+                      setIsReceiptOpen(false);
+                      setUploadedFiles([]);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                      setFormData(createBlankFormData());
+                      setIsManualFormOpen(true);
+                    }}
+                    className="mt-auto w-full px-6 py-3 rounded-lg border border-gray-300 bg-white text-gray-800 hover:bg-gray-50 transition-colors font-semibold"
+                  >
+                    Open Manual Form
+                  </button>
+
+                  <div className="mt-3 text-xs text-gray-500 text-center">
+                    Tip: Manual entry is best when the file is unclear or incomplete.
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {(uploadedFiles.length > 0 || formData) && (
+      {isManualFormOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closeManualForm();
+          }}
+        >
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+          <div className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl border border-gray-200">
+            <div className="sticky top-0 z-10 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <div className="text-lg font-semibold text-gray-900">Manual Form</div>
+                <div className="text-sm text-gray-500">Fill out the form manually</div>
+              </div>
+              <button
+                type="button"
+                onClick={closeManualForm}
+                className="p-2 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form className="px-6 py-6" onSubmit={preventFormSubmit}>
+              {renderFormDetails()}
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearPersisted();
+                    setUploadedFiles([]);
+                    setSubmitMessage(null);
+                    setSubmitError(false);
+                    setReceiptText(null);
+                    setIsReceiptOpen(false);
+                    closeManualForm();
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Clear All
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitDocuments}
+                  disabled={isSubmitting}
+                  className="px-6 py-3 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit Document'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {!isManualFormOpen && (uploadedFiles.length > 0 || formData) && (
         <div className="mt-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h4 className="text-base sm:text-lg font-semibold text-gray-800">Uploaded Files</h4>
             <button
+              type="button"
               onClick={onButtonClick}
               className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
             >
@@ -687,6 +1155,7 @@ export default function FileUploadSection() {
                   <div className="flex items-center justify-end space-x-2">
                     <CheckCircle className="w-5 h-5 text-green-500" />
                     <button
+                      type="button"
                       onClick={() => removeFile(file.id)}
                       className="text-gray-400 hover:text-red-500 transition-colors"
                     >
@@ -708,225 +1177,36 @@ export default function FileUploadSection() {
             </div>
           )}
 
-          {formData && (
-            <div className="mt-6 border border-gray-200 rounded-lg p-4 sm:p-6 bg-gray-50">
-              <h4 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">Extracted Details</h4>
+          <form onSubmit={preventFormSubmit}>
+            {renderFormDetails()}
 
-              <div className="mb-6">
-                <h5 className="text-sm font-semibold text-gray-700 mb-3">Vehicle</h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">VIN</label>
-                    <input value={formData.vehicle.vin} onChange={(e) => updateFormField('vehicle', 'vin', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Year</label>
-                    <input value={formData.vehicle.year} onChange={(e) => updateFormField('vehicle', 'year', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Make</label>
-                    <input value={formData.vehicle.make} onChange={(e) => updateFormField('vehicle', 'make', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Model</label>
-                    <input value={formData.vehicle.model} onChange={(e) => updateFormField('vehicle', 'model', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Transmission</label>
-                    <input value={formData.vehicle.transmission} onChange={(e) => updateFormField('vehicle', 'transmission', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Odometer (km)</label>
-                    <input value={formData.vehicle.odometer_km} onChange={(e) => updateFormField('vehicle', 'odometer_km', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Exterior Color</label>
-                    <input value={formData.vehicle.exterior_color} onChange={(e) => updateFormField('vehicle', 'exterior_color', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Interior Color</label>
-                    <input value={formData.vehicle.interior_color} onChange={(e) => updateFormField('vehicle', 'interior_color', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Has Accident</label>
-                    <input value={formData.vehicle.has_accident} onChange={(e) => updateFormField('vehicle', 'has_accident', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h5 className="text-sm font-semibold text-gray-700 mb-3">Selling Dealership</h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Name</label>
-                    <input value={formData.selling_dealership.name} onChange={(e) => updateFormField('selling_dealership', 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Phone</label>
-                    <input value={formData.selling_dealership.phone} onChange={(e) => updateFormField('selling_dealership', 'phone', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Address</label>
-                    <input value={formData.selling_dealership.address} onChange={(e) => updateFormField('selling_dealership', 'address', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h5 className="text-sm font-semibold text-gray-700 mb-3">Buying Dealership</h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Name</label>
-                    <input value={formData.buying_dealership.name} onChange={(e) => updateFormField('buying_dealership', 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Phone</label>
-                    <input value={formData.buying_dealership.phone} onChange={(e) => updateFormField('buying_dealership', 'phone', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Contact Name</label>
-                    <input value={formData.buying_dealership.contact_name} onChange={(e) => updateFormField('buying_dealership', 'contact_name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h5 className="text-sm font-semibold text-gray-700 mb-3">Pickup Location</h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Name</label>
-                    <input value={formData.pickup_location.name} onChange={(e) => updateFormField('pickup_location', 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Phone</label>
-                    <input value={formData.pickup_location.phone} onChange={(e) => updateFormField('pickup_location', 'phone', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Address</label>
-                    <input value={formData.pickup_location.address} onChange={(e) => updateFormField('pickup_location', 'address', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h5 className="text-sm font-semibold text-gray-700 mb-3">Drop-off Location</h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Name</label>
-                    <input value={String(formData?.dropoff_location?.name ?? '')} onChange={(e) => updateFormField('dropoff_location', 'name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Phone</label>
-                    <input value={String(formData?.dropoff_location?.phone ?? '')} onChange={(e) => updateFormField('dropoff_location', 'phone', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Address</label>
-                    <input
-                      value={String(formData?.dropoff_location?.address ?? '')}
-                      onChange={(e) => updateFormField('dropoff_location', 'address', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      placeholder="Type address to auto-pin on the map"
-                    />
-                    <div className="mt-2 text-xs text-gray-500">
-                      Click the map to pin the drop-off location (auto-fills address), or type an address to auto-pin.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 border border-gray-200 rounded-lg overflow-hidden bg-white h-60 sm:h-80">
-                  <MapContainer
-                    center={dropoffCoords ? [dropoffCoords.lat, dropoffCoords.lng] : pickupCoords ? [pickupCoords.lat, pickupCoords.lng] : [45.5017, -73.5673]}
-                    zoom={dropoffCoords || pickupCoords ? 13 : 10}
-                    style={{ height: '100%', width: '100%' }}
-                  >
-                    <TileLayer
-                      attribution='Tiles &copy; Esri'
-                      url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                    />
-                    <DropoffMapClickHandler />
-                    {(dropoffCoords || pickupCoords) && (
-                      <>
-                        <DropoffMapUpdater
-                          lat={(dropoffCoords ?? pickupCoords)!.lat}
-                          lng={(dropoffCoords ?? pickupCoords)!.lng}
-                        />
-                        <Marker
-                          position={[(dropoffCoords ?? pickupCoords)!.lat, (dropoffCoords ?? pickupCoords)!.lng]}
-                          icon={dropoffMarkerIcon}
-                        />
-                      </>
-                    )}
-                  </MapContainer>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h5 className="text-sm font-semibold text-gray-700 mb-3">Transaction</h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Transaction ID</label>
-                    <input value={formData.transaction.transaction_id} onChange={(e) => updateFormField('transaction', 'transaction_id', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Release Form #</label>
-                    <input value={formData.transaction.release_form_number} onChange={(e) => updateFormField('transaction', 'release_form_number', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Release Date</label>
-                    <input value={formData.transaction.release_date} onChange={(e) => updateFormField('transaction', 'release_date', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Arrival Date</label>
-                    <input value={formData.transaction.arrival_date} onChange={(e) => updateFormField('transaction', 'arrival_date', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <h5 className="text-sm font-semibold text-gray-700 mb-3">Authorization</h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Released By Name</label>
-                    <input value={formData.authorization.released_by_name} onChange={(e) => updateFormField('authorization', 'released_by_name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Released To Name</label>
-                    <input value={formData.authorization.released_to_name} onChange={(e) => updateFormField('authorization', 'released_to_name', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h5 className="text-sm font-semibold text-gray-700 mb-3">Dealer Notes</h5>
-                <textarea value={formData.dealer_notes} onChange={(e) => setFormData((prev: any) => ({ ...prev, dealer_notes: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg min-h-[96px]" />
-              </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  clearPersisted();
+                  setUploadedFiles([]);
+                  setSubmitMessage(null);
+                  setSubmitError(false);
+                  setReceiptText(null);
+                  setIsReceiptOpen(false);
+                  setFormData(null);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                Clear All
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitDocuments}
+                disabled={isSubmitting}
+                className="px-6 py-3 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Submitting...' : formData ? 'Submit Document' : 'Extract Document'}
+              </button>
             </div>
-          )}
-
-          <div className="mt-6 flex justify-end space-x-3">
-            <button
-              onClick={() => {
-                clearPersisted();
-                setUploadedFiles([]);
-                setSubmitMessage(null);
-                setSubmitError(false);
-                setReceiptText(null);
-                setIsReceiptOpen(false);
-                setFormData(null);
-                if (fileInputRef.current) fileInputRef.current.value = '';
-              }}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={handleSubmitDocuments}
-              disabled={isSubmitting}
-              className="px-6 py-3 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? 'Submitting...' : formData ? 'Submit Document' : 'Extract Document'}
-            </button>
-          </div>
+          </form>
         </div>
       )}
     </div>
