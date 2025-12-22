@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Truck, ArrowLeft, Clipboard, CheckCircle, FileText, X, Trash2 } from 'lucide-react';
+import { ArrowLeft, Clipboard, CheckCircle, FileText, X, Trash2 } from 'lucide-react';
 
 interface ReceiptHistoryProps {
   onBack: () => void;
@@ -11,6 +11,43 @@ type ReceiptEntry = {
   createdAt: string;
   text: string;
 };
+
+type DocumentReceiptRow = {
+  id?: unknown;
+  created_at?: unknown;
+  receipt?: unknown;
+};
+
+function extractReceiptPrice(text: string): string | null {
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const amountRegex = /(?:\$|USD\s*)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i;
+  const preferredLineRegex = /(total|amount|price|quote|rate|cost|grand\s*total)/i;
+
+  for (const line of lines) {
+    if (!preferredLineRegex.test(line)) continue;
+    const match = line.match(amountRegex);
+    if (!match) continue;
+
+    const prefix = /\$/.test(line) ? '$' : /\bUSD\b/i.test(line) ? 'USD ' : '$';
+    return `${prefix}${match[1]}`;
+  }
+
+  for (const line of lines) {
+    const match = line.match(/\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/);
+    if (match) return `$${match[1]}`;
+  }
+
+  for (const line of lines) {
+    const match = line.match(/\bUSD\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\b/i);
+    if (match) return `USD ${match[1]}`;
+  }
+
+  return null;
+}
 
 export default function ReceiptHistory({ onBack }: ReceiptHistoryProps) {
   const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
@@ -104,7 +141,7 @@ export default function ReceiptHistory({ onBack }: ReceiptHistoryProps) {
         if (error) throw error;
 
         const next = (Array.isArray(data) ? data : [])
-          .map((row: any) => ({
+          .map((row: DocumentReceiptRow) => ({
             id: String(row?.id ?? ''),
             createdAt: String(row?.created_at ?? new Date().toISOString()),
             text: String(row?.receipt ?? ''),
@@ -155,10 +192,11 @@ export default function ReceiptHistory({ onBack }: ReceiptHistoryProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 sm:h-18">
             <div className="flex items-center space-x-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-lg shadow-cyan-500/30">
-                <Truck className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">EASYDRIVE</span>
+              <img
+                src="/EDC.png"
+                alt="EASYDRIVE"
+                className="h-20 sm:h-24 w-auto"
+              />
             </div>
             <button
               onClick={onBack}
@@ -380,7 +418,12 @@ export default function ReceiptHistory({ onBack }: ReceiptHistoryProps) {
                           </button>
                         </div>
                       </div>
-                      <div className="text-xs text-gray-600 line-clamp-2 leading-relaxed">{r.text}</div>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div className="text-lg font-extrabold text-cyan-700">
+                          {extractReceiptPrice(r.text) ?? '—'}
+                        </div>
+                        <div className="text-[11px] font-medium text-gray-500">Tap to view</div>
+                      </div>
                     </div>
                   ))}
                 </div>

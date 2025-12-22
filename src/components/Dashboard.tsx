@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Truck, User, LogOut, FileText } from 'lucide-react';
+import { User, LogOut, FileText } from 'lucide-react';
 import FileUploadSection from './FileUploadSection';
 import ReceiptHistory from './ReceiptHistory';
 
@@ -89,8 +89,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 sm:h-16">
             <div className="flex items-center space-x-2">
-              <Truck className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-cyan-500" />
-              <span className="text-base sm:text-lg md:text-xl font-bold text-gray-800">EASYDRIVE</span>
+              <img
+                src="/EDC.png"
+                alt="EASYDRIVE"
+                className="h-20 sm:h-24 w-auto"
+              />
             </div>
             <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
               <div className="hidden md:flex items-center space-x-2 text-gray-700">

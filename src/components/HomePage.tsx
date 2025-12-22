@@ -216,18 +216,21 @@ export default function HomePage({ onLogin }: HomePageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm sticky top-0 z-40">
+      <nav className="absolute top-0 inset-x-0 z-40 bg-transparent backdrop-blur-sm drop-shadow-[0_6px_12px_rgba(0,0,0,0.35)] sm:drop-shadow-none sm:backdrop-blur-0">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 sm:h-16">
             <div className="flex items-center space-x-2">
-              <Truck className="w-6 h-6 sm:w-8 sm:h-8 text-cyan-500" />
-              <span className="text-lg sm:text-xl font-bold text-gray-800">EASYDRIVE</span>
+              <img
+                src="/EDC.png"
+                alt="EASYDRIVE"
+                className="h-10 sm:h-20 w-auto"
+              />
             </div>
-            <div className="hidden md:flex space-x-6 lg:space-x-8">
-              <a href="#home" className="text-sm lg:text-base text-gray-700 hover:text-cyan-500 transition-colors">Home</a>
-              <a href="#services" className="text-sm lg:text-base text-gray-700 hover:text-cyan-500 transition-colors">Services</a>
-              <a href="#pricing" className="text-sm lg:text-base text-gray-700 hover:text-cyan-500 transition-colors">Pricing</a>
-              <a href="#contact" className="text-sm lg:text-base text-gray-700 hover:text-cyan-500 transition-colors">Contact</a>
+            <div className="ocean-scrollbar flex max-w-[70%] items-center justify-end gap-4 overflow-x-auto whitespace-nowrap md:max-w-none md:gap-6 lg:gap-8">
+              <a href="#home" className="text-xs md:text-sm lg:text-base text-white/90 hover:text-cyan-300 transition-colors">Home</a>
+              <a href="#services" className="text-xs md:text-sm lg:text-base text-white/90 hover:text-cyan-300 transition-colors">Services</a>
+              <a href="#pricing" className="text-xs md:text-sm lg:text-base text-white/90 hover:text-cyan-300 transition-colors">Pricing</a>
+              <a href="#contact" className="text-xs md:text-sm lg:text-base text-white/90 hover:text-cyan-300 transition-colors">Contact</a>
             </div>
           </div>
         </div>
