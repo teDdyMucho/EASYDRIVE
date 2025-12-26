@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Truck, Package, MapPin, Clock, CheckCircle, ArrowRight, X } from 'lucide-react';
+import { Truck, Package, MapPin, Clock, CheckCircle, ArrowRight, X, Menu } from 'lucide-react';
 import FileUploadSection from './FileUploadSection';
 
 interface HomePageProps {
@@ -13,6 +13,7 @@ export default function HomePage({ onLogin }: HomePageProps) {
   const [gisReady, setGisReady] = useState(false);
   const [gisError, setGisError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const supabase = useMemo(() => {
     const url = import.meta.env.VITE_SUPABASE_URL;
@@ -216,23 +217,77 @@ export default function HomePage({ onLogin }: HomePageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="absolute top-0 inset-x-0 z-40 bg-transparent backdrop-blur-sm drop-shadow-[0_6px_12px_rgba(0,0,0,0.35)] sm:drop-shadow-none sm:backdrop-blur-0">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14 sm:h-16">
-            <div className="flex items-center space-x-2">
+      <nav className="absolute top-0 inset-x-0 z-40 bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Left side - Both Logos */}
+            <div className="flex items-center space-x-4">
               <img
                 src="/EDC.png"
-                alt="EASYDRIVE"
-                className="h-10 sm:h-20 w-auto"
+                alt="EDC"
+                className="h-8 w-auto"
+              />
+              <img
+                src="/logoclick.png"
+                alt="NORTHLINE"
+                className="h-8 w-auto"
               />
             </div>
-            <div className="ocean-scrollbar flex max-w-[70%] items-center justify-end gap-4 overflow-x-auto whitespace-nowrap md:max-w-none md:gap-6 lg:gap-8">
-              <a href="#home" className="text-xs md:text-sm lg:text-base text-white/90 hover:text-cyan-300 transition-colors">Home</a>
-              <a href="#services" className="text-xs md:text-sm lg:text-base text-white/90 hover:text-cyan-300 transition-colors">Services</a>
-              <a href="#pricing" className="text-xs md:text-sm lg:text-base text-white/90 hover:text-cyan-300 transition-colors">Pricing</a>
-              <a href="#contact" className="text-xs md:text-sm lg:text-base text-white/90 hover:text-cyan-300 transition-colors">Contact</a>
+            
+            {/* Center - Navigation Links (Desktop) */}
+            <div className="hidden md:flex items-center space-x-8">
+              <a href="#home" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Home</a>
+              <a href="#services" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Shop Cars</a>
+              <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Financing</a>
+              <a href="#contact" className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Contact</a>
+            </div>
+            
+            {/* Right side - Buttons (Desktop) */}
+            <div className="hidden md:flex items-center space-x-3">
+              <button
+                onClick={openSignIn}
+                className="text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium px-3 py-2"
+              >
+                Log In
+              </button>
+              <button className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700 transition-colors">
+                Get Pre-Approved
+              </button>
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="text-gray-600 hover:text-gray-900 p-2"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
             </div>
           </div>
+
+          {/* Mobile menu */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden bg-white border-t border-gray-200">
+              <div className="px-2 pt-2 pb-3 space-y-1">
+                <a href="#home" className="block px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Home</a>
+                <a href="#services" className="block px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Shop Cars</a>
+                <a href="#pricing" className="block px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Financing</a>
+                <a href="#contact" className="block px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">Contact</a>
+                <div className="border-t border-gray-200 pt-2 mt-2">
+                  <button
+                    onClick={openSignIn}
+                    className="block w-full text-left px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium"
+                  >
+                    Log In
+                  </button>
+                  <button className="block w-full text-left px-3 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors mt-2">
+                    Get Pre-Approved
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -268,7 +323,7 @@ export default function HomePage({ onLogin }: HomePageProps) {
             aria-label="Visit North Line Auto Transport"
           >
             <img
-              src="/logo.jpg"
+              src="/logoclick.png"
               alt="North Line Auto Transport"
               className="h-14 w-auto drop-shadow-[0_10px_20px_rgba(0,0,0,0.4)]"
             />
@@ -283,7 +338,7 @@ export default function HomePage({ onLogin }: HomePageProps) {
           aria-label="Visit North Line Auto Transport"
         >
           <img
-            src="/logo.jpg"
+            src="/logoclick.png"
             alt="North Line Auto Transport"
             className="h-16 md:h-20 w-auto drop-shadow-[0_10px_20px_rgba(0,0,0,0.4)]"
           />
