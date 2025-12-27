@@ -294,7 +294,7 @@ export default function HomePage({ onLogin }: HomePageProps) {
       <div className="relative bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900 text-white py-8 sm:py-16 md:py-20 pb-20 sm:pb-32 overflow-visible min-h-[60vh] sm:min-h-[80vh] md:min-h-[85vh] flex items-center">
         <div className="absolute inset-0 bg-black opacity-40"></div>
         <div className="absolute inset-0" style={{
-          backgroundImage: 'url(https://images.pexels.com/photos/1213294/pexels-photo-1213294.jpeg?auto=compress&cs=tinysrgb&w=1920)',
+          backgroundImage: 'url(/homebroad.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           opacity: 0.25
@@ -319,7 +319,7 @@ export default function HomePage({ onLogin }: HomePageProps) {
             href="https://www.northlineautotransport.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-8 sm:hidden inline-flex items-center justify-center transition-opacity hover:opacity-90"
+            className="mt-8 sm:hidden inline-flex items-center justify-center transition-opacity hover:opacity-90 bg-white/30 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20"
             aria-label="Visit North Line Auto Transport"
           >
             <img
@@ -334,7 +334,7 @@ export default function HomePage({ onLogin }: HomePageProps) {
           href="https://www.northlineautotransport.com/"
           target="_blank"
           rel="noopener noreferrer"
-          className="hidden sm:inline-flex absolute bottom-14 md:bottom-24 left-1/2 -translate-x-1/2 z-20 items-center justify-center transition-opacity hover:opacity-90"
+          className="hidden sm:inline-flex absolute bottom-14 md:bottom-24 left-1/2 -translate-x-1/2 z-20 items-center justify-center transition-opacity hover:opacity-90 bg-white/30 backdrop-blur-sm rounded-lg px-4 py-3 border border-white/20"
           aria-label="Visit North Line Auto Transport"
         >
           <img
