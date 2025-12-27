@@ -487,105 +487,102 @@ export default function HomePage({ onLogin }: HomePageProps) {
             </p>
           </div>
 
-          <div className="mt-8 sm:mt-10 md:mt-12 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 md:gap-10 items-start">
-            <div className="lg:col-span-5 space-y-4 sm:space-y-6">
-              <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-b from-white/85 to-white/65 backdrop-blur-md p-5 sm:p-6 md:p-8 ring-1 ring-black/5 shadow-xl shadow-gray-900/5">
-                <div className="flex items-start justify-between gap-4 sm:gap-6">
-                  <div>
-                    <div className="text-xs sm:text-sm font-semibold tracking-wide text-gray-500">Partnership Overview</div>
-                    <div className="mt-1.5 sm:mt-2 text-base sm:text-lg md:text-xl font-bold text-gray-900">Built for speed. Backed by experience.</div>
-                  </div>
+          <div className="mt-8 sm:mt-10 md:mt-12 space-y-6">
+            {/* Top large section - Partnership Overview */}
+            <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-b from-white/85 to-white/65 backdrop-blur-md p-6 sm:p-8 md:p-10 ring-1 ring-black/5 shadow-xl shadow-gray-900/5">
+              <div className="text-center">
+                <div className="text-sm sm:text-base font-semibold tracking-wide text-gray-500">Partnership Overview</div>
+                <div className="mt-2 text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">Built for speed. Backed by experience.</div>
+              </div>
+
+              <div className="mt-6 sm:mt-8">
+                <p
+                  key={partnershipSlideIndex}
+                  className={`text-center text-sm sm:text-base md:text-lg text-gray-700 leading-relaxed transition-opacity duration-200 max-w-4xl mx-auto ${
+                    partnershipSlideFading ? 'opacity-0' : 'opacity-100'
+                  }`}
+                >
+                  {partnershipSlides[partnershipSlideIndex]}
+                </p>
+
+                <div className="mt-4 sm:mt-6 flex items-center justify-center gap-2">
+                  {partnershipSlides.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setPartnershipSlideIndex(idx)}
+                      className={`h-2 rounded-full transition-all ${
+                        idx === partnershipSlideIndex ? 'w-8 bg-cyan-500' : 'w-3 bg-gray-300 hover:bg-gray-400'
+                      }`}
+                      aria-label={`Go to slide ${idx + 1}`}
+                    />
+                  ))}
                 </div>
+              </div>
 
-                <div className="mt-4 sm:mt-5">
-                  <p
-                    key={partnershipSlideIndex}
-                    className={`text-xs sm:text-sm md:text-base text-gray-700 leading-relaxed transition-opacity duration-200 ${
-                      partnershipSlideFading ? 'opacity-0' : 'opacity-100'
-                    }`}
-                  >
-                    {partnershipSlides[partnershipSlideIndex]}
-                  </p>
+              <div className="mt-6 sm:mt-8 h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
 
-                  <div className="mt-3 sm:mt-4 flex items-center justify-center gap-2">
-                    {partnershipSlides.map((_, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setPartnershipSlideIndex(idx)}
-                        className={`h-1.5 rounded-full transition-all ${
-                          idx === partnershipSlideIndex ? 'w-8 bg-cyan-500' : 'w-3 bg-gray-300 hover:bg-gray-400'
-                        }`}
-                        aria-label={`Go to slide ${idx + 1}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-5 sm:mt-6 h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-
-                <div className="mt-5 sm:mt-6 grid grid-cols-1 gap-3">
-                  <div className="flex items-start gap-2 sm:gap-3 rounded-xl sm:rounded-2xl bg-white/60 p-3 sm:p-4 ring-1 ring-black/5">
-                    <CheckCircle className="mt-0.5 h-4 w-4 sm:h-5 sm:w-5 text-cyan-600 flex-shrink-0" />
-                    <div className="text-xs sm:text-sm text-gray-700 leading-relaxed">
-                      This partnership combines EDT’s technology-driven customer experience with North Line’s proven delivery excellence — ensuring reliable, efficient, and professional transportation from end to end.
-                    </div>
+              <div className="mt-6 sm:mt-8 flex justify-center">
+                <div className="flex items-start gap-3 sm:gap-4 rounded-xl sm:rounded-2xl bg-white/60 p-4 sm:p-6 ring-1 ring-black/5 max-w-3xl">
+                  <CheckCircle className="mt-0.5 h-5 w-5 sm:h-6 sm:w-6 text-cyan-600 flex-shrink-0" />
+                  <div className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                    This partnership combines EDT's technology-driven customer experience with North Line's proven delivery excellence — ensuring reliable, efficient, and professional transportation from end to end.
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="lg:col-span-7">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                <div className="rounded-xl sm:rounded-2xl bg-white/70 backdrop-blur-md p-4 sm:p-5 md:p-6 ring-1 ring-black/5 shadow-xl shadow-gray-900/5 transition-transform duration-300 hover:-translate-y-1">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-lg sm:rounded-xl bg-cyan-50 ring-1 ring-cyan-100">
-                      <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-cyan-600" />
-                    </div>
-                    <div>
-                      <div className="text-xs sm:text-sm font-semibold text-gray-900">Carrier Partner</div>
-                      <div className="text-xs sm:text-sm text-gray-600">North Line Auto Transport</div>
-                    </div>
+            {/* Two medium sections side by side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="rounded-xl sm:rounded-2xl bg-white/70 backdrop-blur-md p-6 sm:p-8 ring-1 ring-black/5 shadow-xl shadow-gray-900/5 transition-transform duration-300 hover:-translate-y-1">
+                <div className="flex items-center gap-3 sm:gap-4 mb-4">
+                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-lg sm:rounded-xl bg-cyan-50 ring-1 ring-cyan-100">
+                    <Truck className="h-6 w-6 sm:h-7 sm:w-7 text-cyan-600" />
                   </div>
-                  <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 leading-relaxed">
-                    Licensed, professional vehicle carrier serving Ontario and Quebec.
+                  <div>
+                    <div className="text-sm sm:text-base font-semibold text-gray-900">Carrier Partner</div>
+                    <div className="text-sm sm:text-base text-gray-600">North Line Auto Transport</div>
                   </div>
                 </div>
+                <div className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                  Licensed, professional vehicle carrier serving Ontario and Quebec.
+                </div>
+              </div>
 
-                <div className="rounded-xl sm:rounded-2xl bg-white/70 backdrop-blur-md p-4 sm:p-5 md:p-6 ring-1 ring-black/5 shadow-xl shadow-gray-900/5 transition-transform duration-300 hover:-translate-y-1">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center rounded-lg sm:rounded-xl bg-cyan-50 ring-1 ring-cyan-100">
-                      <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-cyan-600" />
-                    </div>
-                    <div>
-                      <div className="text-xs sm:text-sm font-semibold text-gray-900">Fully Insured</div>
-                      <div className="text-xs sm:text-sm text-gray-600">Up to $2,000,000 coverage</div>
-                    </div>
+              <div className="rounded-xl sm:rounded-2xl bg-white/70 backdrop-blur-md p-6 sm:p-8 ring-1 ring-black/5 shadow-xl shadow-gray-900/5 transition-transform duration-300 hover:-translate-y-1">
+                <div className="flex items-center gap-3 sm:gap-4 mb-4">
+                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-lg sm:rounded-xl bg-cyan-50 ring-1 ring-cyan-100">
+                    <CheckCircle className="h-6 w-6 sm:h-7 sm:w-7 text-cyan-600" />
                   </div>
-                  <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 leading-relaxed">
-                    Commercial insurance coverage for peace of mind from pickup to delivery.
+                  <div>
+                    <div className="text-sm sm:text-base font-semibold text-gray-900">Fully Insured</div>
+                    <div className="text-sm sm:text-base text-gray-600">Up to $2,000,000 coverage</div>
                   </div>
                 </div>
+                <div className="text-sm sm:text-base text-gray-600 leading-relaxed">
+                  Commercial insurance coverage for peace of mind from pickup to delivery.
+                </div>
+              </div>
+            </div>
 
-                <div className="sm:col-span-2 rounded-2xl sm:rounded-3xl bg-gray-900/95 p-5 sm:p-6 md:p-7 ring-1 ring-white/10 shadow-2xl shadow-black/30">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
-                    <div className="flex-1">
-                      <div className="text-xs sm:text-sm font-semibold text-cyan-300">Technology + Delivery Excellence</div>
-                      <div className="mt-1.5 sm:mt-2 text-xl sm:text-2xl font-bold text-white">Fast, transparent, effortless</div>
-                      <div className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-300 leading-relaxed max-w-2xl">
-                        EDT provides the instant pricing engine, order intake workflow, and automation — while North Line's experienced logistics and carrier team fulfills your transportation professionally end-to-end.
-                      </div>
-                    </div>
-                    <div className="flex-shrink-0">
-                      <button
-                        onClick={openUpload}
-                        className="inline-flex items-center gap-2 bg-cyan-500 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl hover:bg-cyan-400 transition-all transform hover:scale-105 font-semibold text-xs sm:text-sm shadow-lg shadow-cyan-500/30 whitespace-nowrap"
-                      >
-                        Get Started Now
-                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      </button>
-                    </div>
+            {/* Full-width bottom section */}
+            <div className="rounded-2xl sm:rounded-3xl bg-gray-900/95 p-6 sm:p-8 md:p-10 ring-1 ring-white/10 shadow-2xl shadow-black/30">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-8">
+                <div className="flex-1">
+                  <div className="text-sm sm:text-base font-semibold text-cyan-300">Technology + Delivery Excellence</div>
+                  <div className="mt-2 text-2xl sm:text-3xl md:text-4xl font-bold text-white">Fast, transparent, effortless</div>
+                  <div className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg text-gray-300 leading-relaxed max-w-3xl">
+                    EDT provides the instant pricing engine, order intake workflow, and automation — while North Line's experienced logistics and carrier team fulfills your transportation professionally end-to-end.
                   </div>
+                </div>
+                <div className="flex-shrink-0">
+                  <button
+                    onClick={openUpload}
+                    className="inline-flex items-center gap-2 bg-cyan-500 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg sm:rounded-xl hover:bg-cyan-400 transition-all transform hover:scale-105 font-semibold text-sm sm:text-base shadow-lg shadow-cyan-500/30 whitespace-nowrap"
+                  >
+                    Get Started Now
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
                 </div>
               </div>
             </div>
